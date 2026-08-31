@@ -1,4 +1,3 @@
-```python
 """
 App Streamlit — Análisis de nivel de ríos/quebradas
 CORNARE / MARCO
