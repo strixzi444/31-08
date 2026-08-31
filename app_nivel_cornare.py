@@ -1486,4 +1486,3 @@ else:
         "👈 Ajusta los parámetros en el panel "
         "lateral y presiona **🔍 Consultar**."
     )
-```
