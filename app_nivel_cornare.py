@@ -1,181 +1,778 @@
-"""
-App básica de Streamlit — Nivel de ríos/quebradas (CORNARE / MARCO)
---------------------------------------------------------------------
-Cada estudiante debe cambiar, como mínimo, el código de la estación
-en el sidebar. Los valores de fecha y calidad también son ajustables.
-
-Para correrla:
-    streamlit run app_nivel_cornare.py
-"""
+# ================================================================
+# ACTIVIDAD INDIVIDUAL
+# Análisis de nivel de ríos y quebradas - CORNARE / MARCO
+# ================================================================
 
 import requests
 import pandas as pd
 import numpy as np
-import streamlit as st
+import matplotlib.pyplot as plt
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# ------------------------------------------------------------------
-# Coordenadas por defecto (Institución Universitaria Pascual Bravo)
-# Se usan solo si la API no trae la latitud/longitud de la estación.
-# ------------------------------------------------------------------
-LAT_DEFECTO = 6.2766
-LON_DEFECTO = -75.5901
+# ================================================================
+# 1. PARÁMETROS DE TU CONSULTA
+# ================================================================
+
+# Cada estudiante debe cambiar estos valores
+NOMBRE_ESTUDIANTE = "Juan Jose Patiño Amariles"
+
+CODIGO_ESTACION = "42"
+
+FECHA_DESDE = "2026-08-23"
+FECHA_HASTA = "2026-08-30"
+
+CALIDAD = 1
+# 1 = datos validados
+# 0 = todos los datos disponibles
+
+
+# ================================================================
+# CONFIGURACIÓN DE LA API
+# ================================================================
 
 API_BASE_URL = "https://marco.cornare.gov.co/api/v1/estaciones"
 
 LLAVE_FECHA = "level_date"
 LLAVE_VALOR = "level"
+
+
+# Coordenadas por defecto
+LAT_DEFECTO = 6.2766
+LON_DEFECTO = -75.5901
+
 CANDIDATOS_LAT = ["lat", "latitude", "latitud"]
 CANDIDATOS_LON = ["lng", "lon", "longitude", "longitud"]
 
-st.set_page_config(page_title="Nivel de estación — CORNARE", page_icon="🌊", layout="wide")
 
+# ================================================================
+# 2. CONSULTAR LA API REAL Y TRAER TODAS LAS PÁGINAS
+# ================================================================
 
-# ------------------------------------------------------------------
-# Funciones de consulta
-# ------------------------------------------------------------------
 def obtener_serie_nivel(codigo_estacion, desde, hasta, calidad=1, timeout=30):
+
     url = f"{API_BASE_URL}/{codigo_estacion}/nivel"
-    params = {"desde": desde, "hasta": hasta, "calidad": calidad}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
+
+    params = {
+        "desde": desde,
+        "hasta": hasta,
+        "calidad": calidad
     }
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*"
+    }
+
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=timeout, verify=False)
-        if resp.status_code == 200:
-            return resp.json(), None
-        return None, f"HTTP {resp.status_code}"
+        respuesta = requests.get(
+            url,
+            params=params,
+            headers=headers,
+            timeout=timeout,
+            verify=False
+        )
+
+        if respuesta.status_code == 200:
+            return respuesta.json(), None
+
+        return None, f"HTTP {respuesta.status_code}"
+
     except requests.exceptions.RequestException as e:
         return None, f"Error de red: {e}"
 
 
 def obtener_todas_las_paginas(datos_json, timeout=30):
+
     registros = list(datos_json.get("values", []))
+
     siguiente_url = datos_json.get("next")
+
     while siguiente_url:
+
         try:
-            resp = requests.get(siguiente_url, timeout=timeout, verify=False)
+            respuesta = requests.get(
+                siguiente_url,
+                timeout=timeout,
+                verify=False
+            )
+
         except requests.exceptions.RequestException:
             break
-        if resp.status_code != 200:
+
+        if respuesta.status_code != 200:
             break
-        pagina = resp.json()
-        registros.extend(pagina.get("values", []))
+
+        pagina = respuesta.json()
+
+        registros.extend(
+            pagina.get("values", [])
+        )
+
         siguiente_url = pagina.get("next")
+
     return registros
 
 
-def detectar_coordenadas(datos_json):
-    """Busca lat/lon en las llaves raíz de la respuesta. Si no las encuentra, usa el valor por defecto."""
-    if not isinstance(datos_json, dict):
-        return LAT_DEFECTO, LON_DEFECTO, False
-
-    lat = next((datos_json[k] for k in CANDIDATOS_LAT if k in datos_json), None)
-    lon = next((datos_json[k] for k in CANDIDATOS_LON if k in datos_json), None)
-
-    if lat is not None and lon is not None:
-        try:
-            return float(lat), float(lon), True
-        except (TypeError, ValueError):
-            pass
-    return LAT_DEFECTO, LON_DEFECTO, False
+# Ejecutar consulta
+datos_crudos, error = obtener_serie_nivel(
+    CODIGO_ESTACION,
+    FECHA_DESDE,
+    FECHA_HASTA,
+    CALIDAD
+)
 
 
-def calcular_indice_calidad(df):
-    """Índice simple (0-100) combinando completitud de la serie y proporción de outliers."""
-    if df.empty or len(df) < 2:
-        return 0.0, 0, 0
+if error:
 
-    df_idx = df.set_index("fecha")
-    frecuencia_tipica = df["fecha"].diff().dropna().mode()
-    if len(frecuencia_tipica) == 0:
-        return 0.0, 0, 0
-    frecuencia_tipica = frecuencia_tipica[0]
+    print("❌ Error al consultar la API:")
+    print(error)
 
-    rango_completo = pd.date_range(start=df_idx.index.min(), end=df_idx.index.max(), freq=frecuencia_tipica)
-    esperados = len(rango_completo)
-    huecos = esperados - len(df_idx)
-    completitud = max(0.0, 1 - (huecos / esperados)) if esperados > 0 else 0.0
-
-    Q1, Q3 = df["nivel"].quantile(0.25), df["nivel"].quantile(0.75)
-    IQR = Q3 - Q1
-    lim_inf, lim_sup = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
-    es_outlier = (df["nivel"] < lim_inf) | (df["nivel"] > lim_sup) | (df["nivel"] < 0)
-    proporcion_outliers = es_outlier.mean()
-
-    indice = (completitud * 0.7 + (1 - proporcion_outliers) * 0.3) * 100
-    return round(indice, 1), int(huecos), int(es_outlier.sum())
-
-
-# ------------------------------------------------------------------
-# Sidebar — parámetros de la consulta (editables por cada estudiante)
-# ------------------------------------------------------------------
-st.sidebar.header("Parámetros de tu consulta")
-nombre_estudiante = st.sidebar.text_input("Nombre del estudiante", "Tu Nombre Aquí")
-codigo_estacion = st.sidebar.text_input("Código de estación", "42")
-fecha_desde = st.sidebar.date_input("Desde", pd.to_datetime("2026-08-23")).strftime("%Y-%m-%d")
-fecha_hasta = st.sidebar.date_input("Hasta", pd.to_datetime("2026-08-30")).strftime("%Y-%m-%d")
-calidad = st.sidebar.selectbox("Calidad", [1, 0], index=0, help="1 = solo datos validados")
-consultar = st.sidebar.button("🔍 Consultar", type="primary")
-
-st.title("🌊 Nivel de ríos y quebradas — CORNARE")
-st.caption(f"Estudiante: **{nombre_estudiante}** · Estación: **{codigo_estacion}**")
-
-# ------------------------------------------------------------------
-# Consulta y procesamiento
-# ------------------------------------------------------------------
-if consultar:
-    with st.spinner("Consultando la API..."):
-        datos_crudos, error = obtener_serie_nivel(codigo_estacion, fecha_desde, fecha_hasta, calidad)
-
-    if error:
-        st.error(f"❌ {error}")
-    else:
-        registros = obtener_todas_las_paginas(datos_crudos)
-
-        if not registros:
-            st.warning("No hay registros para esta estación y rango de fechas. Prueba otro código u otro rango.")
-        else:
-            df = pd.DataFrame(registros)
-            df = df.rename(columns={LLAVE_FECHA: "fecha", LLAVE_VALOR: "nivel"})
-            df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
-            df["nivel"] = pd.to_numeric(df["nivel"], errors="coerce")
-            df = df.dropna(subset=["fecha", "nivel"]).sort_values("fecha").reset_index(drop=True)
-
-            lat, lon, coords_reales = detectar_coordenadas(datos_crudos)
-            indice_calidad, huecos, n_outliers = calcular_indice_calidad(df)
-
-            # --- Métricas principales ---
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Lecturas", len(df))
-            col2.metric("Nivel promedio", f"{df['nivel'].mean():.2f}")
-            col3.metric("Índice de calidad", f"{indice_calidad} / 100")
-            col4.metric("Outliers detectados", n_outliers)
-
-            # --- Gráfico de la serie ---
-            st.subheader("Serie de nivel")
-            st.line_chart(df.set_index("fecha")["nivel"])
-
-            # --- Mapa de la estación ---
-            st.subheader("Ubicación de la estación")
-            if not coords_reales:
-                st.caption("La API no trajo latitud/longitud de la estación — se muestra el punto de partida (Pascual Bravo). Ajusta `CANDIDATOS_LAT` / `CANDIDATOS_LON` si conoces el nombre real de esas llaves.")
-            st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}), zoom=10)
-
-            # --- Detalle de calidad ---
-            with st.expander("Detalle del índice de calidad"):
-                st.write(f"- Huecos de reporte detectados: **{huecos}**")
-                st.write(f"- Outliers (IQR + nivel negativo): **{n_outliers}** de {len(df)} lecturas")
-                st.write("El índice combina completitud de la serie (70%) y proporción de datos sin outliers (30%).")
-
-            # --- Tabla y descarga ---
-            with st.expander("Ver datos crudos"):
-                st.dataframe(df, use_container_width=True)
-
-            csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button("⬇️ Descargar CSV", csv, file_name=f"nivel_estacion_{codigo_estacion}.csv", mime="text/csv")
 else:
-    st.info("Ajusta los parámetros en el sidebar y presiona **Consultar**.")
+
+    registros = obtener_todas_las_paginas(datos_crudos)
+
+    print("Consulta realizada correctamente.")
+    print("Cantidad de registros obtenidos:", len(registros))
+
+
+# ================================================================
+# 3. CONSTRUIR EL DATAFRAME DE SERIE DE TIEMPO
+# ================================================================
+
+if not error and registros:
+
+    df = pd.DataFrame(registros)
+
+    # Cambiar nombres de columnas
+    df = df.rename(
+        columns={
+            LLAVE_FECHA: "fecha",
+            LLAVE_VALOR: "nivel"
+        }
+    )
+
+    print("Columnas disponibles:")
+    print(df.columns.tolist())
+
+    print("\nPrimeros registros:")
+    display(df.head())
+
+
+# ================================================================
+# 4. TIPOS DE DATOS Y ORDEN TEMPORAL
+# ================================================================
+
+if not error and registros:
+
+    # Convertir fecha a datetime
+    df["fecha"] = pd.to_datetime(
+        df["fecha"],
+        errors="coerce"
+    )
+
+    # Convertir nivel a número
+    df["nivel"] = pd.to_numeric(
+        df["nivel"],
+        errors="coerce"
+    )
+
+    # Eliminar registros que no tengan fecha o nivel
+    df = df.dropna(
+        subset=["fecha", "nivel"]
+    )
+
+    # Ordenar cronológicamente
+    df = df.sort_values(
+        "fecha"
+    ).reset_index(drop=True)
+
+    print("Tipos de datos:")
+
+    print(df.dtypes)
+
+    print("\nRango temporal:")
+
+    print("Desde:", df["fecha"].min())
+    print("Hasta:", df["fecha"].max())
+
+    print("\nCantidad de registros:", len(df))
+
+    print("\nDataFrame ordenado:")
+    display(df.head(10))
+
+
+# ================================================================
+# 5. MISSING VALUES REALES
+#    MÉTODO CORRECTO: REINDEXAR A FRECUENCIA REGULAR
+# ================================================================
+
+if not error and registros and len(df) > 1:
+
+    # ------------------------------------------------------------
+    # Detectar la frecuencia típica de medición
+    # ------------------------------------------------------------
+
+    diferencias = (
+        df["fecha"]
+        .sort_values()
+        .diff()
+        .dropna()
+    )
+
+    frecuencia_tipica = diferencias.mode()
+
+    if len(frecuencia_tipica) > 0:
+
+        frecuencia = frecuencia_tipica.iloc[0]
+
+        print("Frecuencia típica detectada:")
+        print(frecuencia)
+
+    else:
+
+        frecuencia = None
+
+        print("No fue posible determinar la frecuencia.")
+
+
+    # ------------------------------------------------------------
+    # Reindexar a frecuencia regular
+    # ------------------------------------------------------------
+
+    if frecuencia is not None:
+
+        # Convertimos la frecuencia a una frecuencia de pandas
+        frecuencia_str = pd.tseries.frequencies.to_offset(
+            frecuencia
+        )
+
+        indice_completo = pd.date_range(
+            start=df["fecha"].min(),
+            end=df["fecha"].max(),
+            freq=frecuencia_str
+        )
+
+        df_missing = (
+            df.set_index("fecha")
+            .reindex(indice_completo)
+        )
+
+        df_missing.index.name = "fecha"
+
+        # --------------------------------------------------------
+        # Identificar missing values reales
+        # --------------------------------------------------------
+
+        cantidad_missing = df_missing["nivel"].isna().sum()
+
+        total_esperado = len(df_missing)
+
+        print("\n========== MISSING VALUES ==========")
+
+        print("Registros esperados:", total_esperado)
+        print("Registros originales:", len(df))
+        print("Missing values reales:", cantidad_missing)
+
+        porcentaje_missing = (
+            cantidad_missing / total_esperado
+        ) * 100
+
+        print(
+            f"Porcentaje de missing: "
+            f"{porcentaje_missing:.2f}%"
+        )
+
+        print("\nPrimeros registros con estructura regular:")
+
+        display(df_missing.head(20))
+
+    else:
+
+        df_missing = df.set_index("fecha").copy()
+
+else:
+
+    print("No hay suficientes datos para analizar missing values.")
+
+
+# ================================================================
+# 6. OUTLIERS CON IQR + LÍMITES FÍSICOS
+# ================================================================
+
+if not error and registros:
+
+    # Trabajamos únicamente con valores existentes
+    serie_nivel = df["nivel"].dropna()
+
+    # ------------------------------------------------------------
+    # Método IQR
+    # ------------------------------------------------------------
+
+    Q1 = serie_nivel.quantile(0.25)
+
+    Q3 = serie_nivel.quantile(0.75)
+
+    IQR = Q3 - Q1
+
+    limite_inferior_iqr = Q1 - 1.5 * IQR
+
+    limite_superior_iqr = Q3 + 1.5 * IQR
+
+
+    # ------------------------------------------------------------
+    # Límites físicos
+    # ------------------------------------------------------------
+
+    # Un nivel negativo no tiene sentido físico
+    limite_fisico_inferior = 0
+
+    # Para el límite superior no imponemos un valor arbitrario,
+    # porque depende de las características de cada estación.
+    limite_fisico_superior = np.inf
+
+
+    # ------------------------------------------------------------
+    # Detectar outliers
+    # ------------------------------------------------------------
+
+    df["outlier_iqr"] = (
+        (df["nivel"] < limite_inferior_iqr) |
+        (df["nivel"] > limite_superior_iqr)
+    )
+
+    df["outlier_fisico"] = (
+        (df["nivel"] < limite_fisico_inferior) |
+        (df["nivel"] > limite_fisico_superior)
+    )
+
+    df["outlier"] = (
+        df["outlier_iqr"] |
+        df["outlier_fisico"]
+    )
+
+
+    cantidad_outliers = df["outlier"].sum()
+
+    print("\n========== OUTLIERS ==========")
+
+    print(f"Q1: {Q1:.4f}")
+    print(f"Q3: {Q3:.4f}")
+    print(f"IQR: {IQR:.4f}")
+
+    print(
+        f"Límite inferior IQR: "
+        f"{limite_inferior_iqr:.4f}"
+    )
+
+    print(
+        f"Límite superior IQR: "
+        f"{limite_superior_iqr:.4f}"
+    )
+
+    print(
+        "Límite físico inferior: 0"
+    )
+
+    print(
+        f"Cantidad de outliers: "
+        f"{cantidad_outliers}"
+    )
+
+    print("\nRegistros considerados outliers:")
+
+    display(
+        df[df["outlier"]]
+    )
+
+
+# ================================================================
+# GRÁFICO DE OUTLIERS
+# ================================================================
+
+if not error and registros:
+
+    plt.figure(figsize=(12, 5))
+
+    plt.plot(
+        df["fecha"],
+        df["nivel"],
+        label="Nivel"
+    )
+
+    plt.scatter(
+        df.loc[df["outlier"], "fecha"],
+        df.loc[df["outlier"], "nivel"],
+        label="Outliers"
+    )
+
+    plt.axhline(
+        limite_superior_iqr,
+        linestyle="--",
+        label="Límite superior IQR"
+    )
+
+    plt.axhline(
+        limite_inferior_iqr,
+        linestyle="--",
+        label="Límite inferior IQR"
+    )
+
+    plt.title(
+        "Detección de outliers - Método IQR"
+    )
+
+    plt.xlabel("Fecha")
+    plt.ylabel("Nivel")
+
+    plt.legend()
+
+    plt.grid(True)
+
+    plt.show()
+
+
+# ================================================================
+# 7. NORMALIZACIÓN Y ESTANDARIZACIÓN
+# ================================================================
+
+if not error and registros:
+
+    # ------------------------------------------------------------
+    # Para evitar fuga de información (data leakage),
+    # los parámetros se calculan sobre los datos de entrenamiento.
+    # ------------------------------------------------------------
+
+    datos_modelo = df[
+        ["fecha", "nivel"]
+    ].copy()
+
+    # Quitamos outliers antes de preparar el modelo
+    datos_modelo = datos_modelo[
+        ~df["outlier"]
+    ]
+
+    datos_modelo = datos_modelo.dropna()
+
+    datos_modelo = datos_modelo.sort_values(
+        "fecha"
+    ).reset_index(drop=True)
+
+
+    # ------------------------------------------------------------
+    # Primero dividimos temporalmente
+    # ------------------------------------------------------------
+
+    n = len(datos_modelo)
+
+    n_train = int(n * 0.70)
+
+    n_validation = int(n * 0.15)
+
+    train = datos_modelo.iloc[
+        :n_train
+    ].copy()
+
+    validation = datos_modelo.iloc[
+        n_train:n_train + n_validation
+    ].copy()
+
+    test = datos_modelo.iloc[
+        n_train + n_validation:
+    ].copy()
+
+
+    # ------------------------------------------------------------
+    # NORMALIZACIÓN MIN-MAX
+    # ------------------------------------------------------------
+
+    minimo = train["nivel"].min()
+
+    maximo = train["nivel"].max()
+
+    if maximo != minimo:
+
+        train["nivel_normalizado"] = (
+            (train["nivel"] - minimo) /
+            (maximo - minimo)
+        )
+
+        validation["nivel_normalizado"] = (
+            (validation["nivel"] - minimo) /
+            (maximo - minimo)
+        )
+
+        test["nivel_normalizado"] = (
+            (test["nivel"] - minimo) /
+            (maximo - minimo)
+        )
+
+    else:
+
+        train["nivel_normalizado"] = 0
+
+        validation["nivel_normalizado"] = 0
+
+        test["nivel_normalizado"] = 0
+
+
+    # ------------------------------------------------------------
+    # ESTANDARIZACIÓN Z-SCORE
+    # ------------------------------------------------------------
+
+    media_train = train["nivel"].mean()
+
+    desviacion_train = train["nivel"].std()
+
+    if desviacion_train != 0:
+
+        train["nivel_estandarizado"] = (
+            (train["nivel"] - media_train) /
+            desviacion_train
+        )
+
+        validation["nivel_estandarizado"] = (
+            (validation["nivel"] - media_train) /
+            desviacion_train
+        )
+
+        test["nivel_estandarizado"] = (
+            (test["nivel"] - media_train) /
+            desviacion_train
+        )
+
+    else:
+
+        train["nivel_estandarizado"] = 0
+
+        validation["nivel_estandarizado"] = 0
+
+        test["nivel_estandarizado"] = 0
+
+
+    print("\n========== NORMALIZACIÓN ==========")
+
+    print(
+        f"Mínimo utilizado (TRAIN): {minimo:.4f}"
+    )
+
+    print(
+        f"Máximo utilizado (TRAIN): {maximo:.4f}"
+    )
+
+    print(
+        f"Media utilizada (TRAIN): {media_train:.4f}"
+    )
+
+    print(
+        f"Desviación estándar (TRAIN): "
+        f"{desviacion_train:.4f}"
+    )
+
+
+    print("\nDatos normalizados y estandarizados:")
+
+    display(
+        train.head(10)
+    )
+
+
+# ================================================================
+# 8. TRAIN / VALIDATION / TEST
+#    SPLIT CRONOLÓGICO
+# ================================================================
+
+if not error and registros:
+
+    print("\n========== DIVISIÓN TEMPORAL ==========")
+
+    print(
+        f"TRAIN: {len(train)} registros "
+        f"({len(train) / len(datos_modelo) * 100:.1f}%)"
+    )
+
+    print(
+        f"VALIDATION: {len(validation)} registros "
+        f"({len(validation) / len(datos_modelo) * 100:.1f}%)"
+    )
+
+    print(
+        f"TEST: {len(test)} registros "
+        f"({len(test) / len(datos_modelo) * 100:.1f}%)"
+    )
+
+
+    print("\nRangos de fechas:")
+
+    if not train.empty:
+        print(
+            "TRAIN:",
+            train["fecha"].min(),
+            "->",
+            train["fecha"].max()
+        )
+
+    if not validation.empty:
+        print(
+            "VALIDATION:",
+            validation["fecha"].min(),
+            "->",
+            validation["fecha"].max()
+        )
+
+    if not test.empty:
+        print(
+            "TEST:",
+            test["fecha"].min(),
+            "->",
+            test["fecha"].max()
+        )
+
+
+# ---------------------------------------------------------------
+# Gráfico del split
+# ---------------------------------------------------------------
+
+if not error and registros:
+
+    plt.figure(figsize=(12, 5))
+
+    if not train.empty:
+        plt.plot(
+            train["fecha"],
+            train["nivel"],
+            label="Train"
+        )
+
+    if not validation.empty:
+        plt.plot(
+            validation["fecha"],
+            validation["nivel"],
+            label="Validation"
+        )
+
+    if not test.empty:
+        plt.plot(
+            test["fecha"],
+            test["nivel"],
+            label="Test"
+        )
+
+    plt.title(
+        "División cronológica Train / Validation / Test"
+    )
+
+    plt.xlabel("Fecha")
+    plt.ylabel("Nivel")
+
+    plt.legend()
+
+    plt.grid(True)
+
+    plt.show()
+
+
+# ================================================================
+# 9. ESTADÍSTICA DESCRIPTIVA
+# ================================================================
+
+if not error and registros:
+
+    print("\n========== ESTADÍSTICA DESCRIPTIVA ==========")
+
+    estadistica = df["nivel"].describe()
+
+    display(
+        estadistica
+    )
+
+
+    # Estadísticas adicionales
+    print("\nMedidas principales:")
+
+    print(
+        f"Media: "
+        f"{df['nivel'].mean():.4f}"
+    )
+
+    print(
+        f"Mediana: "
+        f"{df['nivel'].median():.4f}"
+    )
+
+    print(
+        f"Desviación estándar: "
+        f"{df['nivel'].std():.4f}"
+    )
+
+    print(
+        f"Mínimo: "
+        f"{df['nivel'].min():.4f}"
+    )
+
+    print(
+        f"Máximo: "
+        f"{df['nivel'].max():.4f}"
+    )
+
+    print(
+        f"Rango: "
+        f"{df['nivel'].max() - df['nivel'].min():.4f}"
+    )
+
+
+# ================================================================
+# RESUMEN FINAL
+# ================================================================
+
+if not error and registros:
+
+    print("\n")
+    print("=" * 60)
+    print("RESUMEN DEL ANÁLISIS")
+    print("=" * 60)
+
+    print(
+        f"Estudiante: {NOMBRE_ESTUDIANTE}"
+    )
+
+    print(
+        f"Estación: {CODIGO_ESTACION}"
+    )
+
+    print(
+        f"Periodo: {FECHA_DESDE} hasta {FECHA_HASTA}"
+    )
+
+    print(
+        f"Lecturas originales: {len(df)}"
+    )
+
+    if "cantidad_missing" in locals():
+
+        print(
+            f"Missing values reales: "
+            f"{cantidad_missing}"
+        )
+
+    print(
+        f"Outliers detectados: "
+        f"{cantidad_outliers}"
+    )
+
+    print(
+        f"Promedio del nivel: "
+        f"{df['nivel'].mean():.4f}"
+    )
+
+    print(
+        f"Desviación estándar: "
+        f"{df['nivel'].std():.4f}"
+    )
+
+    print("=" * 60)
