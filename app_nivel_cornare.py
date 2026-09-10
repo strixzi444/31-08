@@ -1,6 +1,7 @@
 # ================================================================
 # ACTIVIDAD INDIVIDUAL
 # Análisis de nivel de ríos y quebradas - CORNARE / MARCO
+# VERSIÓN STREAMLIT: MISMA LÓGICA DEL ARCHIVO ORIGINAL + PRESENTACIÓN
 # ================================================================
 
 import requests
@@ -13,14 +14,14 @@ import streamlit as st
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
-# CONFIGURACIÓN VISUAL DE STREAMLIT
+# CONFIGURACIÓN DE STREAMLIT (SOLO PRESENTACIÓN)
 # ================================================================
 
 st.set_page_config(
-    page_title="CORNARE | Análisis de niveles",
+    page_title="CORNARE · Análisis de nivel",
     page_icon="🌊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(
@@ -29,476 +30,141 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
 
     :root {
-        --water: #0b7285;
-        --water-dark: #075985;
-        --water-deep: #083344;
-        --river: #14b8a6;
-        --leaf: #2f855a;
-        --mist: #eff8fb;
+        --navy: #06364a;
+        --blue: #0b7285;
+        --cyan: #12a6b7;
+        --aqua: #22c4b6;
+        --green: #2f8f62;
+        --bg: #f2f9fa;
         --card: #ffffff;
-        --ink: #16323a;
-        --muted: #61757d;
-        --line: #dcebef;
-        --soft-blue: #e5f6fa;
-        --soft-green: #eaf7f0;
-        --soft-yellow: #fff8e6;
-        --soft-red: #fff0ef;
-        --shadow: 0 12px 30px rgba(7, 89, 133, 0.08);
+        --text: #17333d;
+        --muted: #6a828a;
+        --line: #dbeaed;
+        --shadow: 0 12px 32px rgba(6, 54, 74, .08);
     }
 
     .stApp {
         background:
-            radial-gradient(circle at 0% 0%, rgba(20,184,166,0.10), transparent 23rem),
-            radial-gradient(circle at 100% 5%, rgba(11,114,133,0.10), transparent 24rem),
-            linear-gradient(180deg, #f5fbfc 0%, #f8fbfc 52%, #eef8f7 100%);
-        color: var(--ink);
+            radial-gradient(circle at 0% 0%, rgba(34,196,182,.11), transparent 26rem),
+            radial-gradient(circle at 100% 0%, rgba(18,166,183,.10), transparent 25rem),
+            linear-gradient(180deg, #f6fcfc 0%, #f2f9fa 100%);
+        color: var(--text);
         font-family: 'Inter', sans-serif;
     }
 
-    .main .block-container {
-        max-width: 1400px;
-        padding: 2rem 2.2rem 3.5rem;
+    .block-container {
+        max-width: 1450px;
+        padding: 1.4rem 2rem 3rem;
     }
 
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #062f3b 0%, #08485a 54%, #0b6572 100%);
-        border-right: 1px solid rgba(255,255,255,0.08);
+        background: linear-gradient(180deg, #06364a 0%, #07556a 58%, #087b80 100%);
     }
+    [data-testid="stSidebar"] * { color: #f1ffff; }
+    [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,.17); }
 
-    [data-testid="stSidebar"] * {
-        color: #eefcff;
+    .brand {
+        display:flex; align-items:center; gap:.7rem;
+        margin-bottom:.2rem;
     }
-
-    [data-testid="stSidebar"] hr {
-        border-color: rgba(255,255,255,0.15);
+    .brand-icon {
+        width:42px; height:42px; display:flex; align-items:center; justify-content:center;
+        border-radius:13px; background:rgba(255,255,255,.13); font-size:1.35rem;
     }
+    .brand-title { font:700 1.25rem 'Space Grotesk',sans-serif; }
+    .brand-sub { color:#c8f4f5; font-size:.78rem; margin-top:.15rem; line-height:1.45; }
 
     .hero {
-        position: relative;
-        overflow: hidden;
-        padding: 2rem 2.1rem;
-        border-radius: 28px;
-        background:
-            linear-gradient(135deg, rgba(5,59,72,0.98) 0%, rgba(8,98,113,0.97) 58%, rgba(20,184,166,0.96) 100%);
-        box-shadow: 0 20px 45px rgba(8, 67, 82, 0.20);
-        margin-bottom: 1.4rem;
-        border: 1px solid rgba(255,255,255,0.08);
+        position:relative; overflow:hidden;
+        border-radius:28px;
+        padding:2rem 2.15rem;
+        background:linear-gradient(135deg,#06364a 0%,#087786 58%,#16aa9e 100%);
+        box-shadow:0 20px 46px rgba(6,54,74,.20);
+        margin-bottom:1.25rem;
     }
-
-    .hero::after {
-        content: "";
-        position: absolute;
-        width: 270px;
-        height: 270px;
-        border-radius: 50%;
-        right: -90px;
-        top: -130px;
-        background: rgba(255,255,255,0.08);
-        box-shadow:
-            -85px 155px 0 20px rgba(255,255,255,0.035),
-            -170px 65px 0 48px rgba(255,255,255,0.025);
+    .hero:after {
+        content:""; position:absolute; width:320px; height:320px; border-radius:50%;
+        right:-110px; top:-170px; background:rgba(255,255,255,.07);
+        box-shadow:-110px 190px 0 26px rgba(255,255,255,.028), -220px 80px 0 52px rgba(255,255,255,.02);
     }
+    .eyebrow { color:#c9fbfd; font-size:.76rem; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
+    .hero h1 { color:#fff; font:700 clamp(2rem,4vw,3.2rem) 'Space Grotesk',sans-serif; letter-spacing:-.045em; margin:.45rem 0 .55rem; }
+    .hero p { color:#dff8fa; max-width:850px; line-height:1.62; margin:0; }
+    .chips { position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1.15rem; }
+    .chip { padding:.42rem .7rem; border-radius:999px; color:#efffff; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.13); font-size:.78rem; font-weight:700; }
 
-    .hero-kicker {
-        display: inline-flex;
-        padding: 0.35rem 0.7rem;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.13);
-        border: 1px solid rgba(255,255,255,0.14);
-        font-size: 0.77rem;
-        font-weight: 700;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        color: #d7fbff;
-        margin-bottom: 0.8rem;
+    .section-head {
+        display:flex; align-items:flex-end; justify-content:space-between; gap:1rem;
+        margin:1.55rem 0 .8rem;
     }
+    .section-title { font:700 1.38rem 'Space Grotesk',sans-serif; color:var(--navy); letter-spacing:-.025em; margin:0; }
+    .section-desc { color:var(--muted); font-size:.9rem; margin:.2rem 0 0; }
 
-    .hero-title {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: clamp(2rem, 4vw, 3.3rem);
-        line-height: 1.02;
-        font-weight: 700;
-        letter-spacing: -0.04em;
-        margin: 0;
-        color: #ffffff;
+    .info-card, .metric-card {
+        background:rgba(255,255,255,.97); border:1px solid var(--line); border-radius:18px;
+        padding:1rem 1.05rem; box-shadow:var(--shadow);
     }
+    .info-card { min-height:112px; }
+    .label { color:#70858c; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .value { color:var(--navy); font:700 1.12rem 'Space Grotesk',sans-serif; margin-top:.42rem; word-break:break-word; }
+    .note { color:var(--muted); font-size:.78rem; line-height:1.45; margin-top:.25rem; }
 
-    .hero-subtitle {
-        margin: 0.85rem 0 0;
-        max-width: 780px;
-        color: #d9f8fb;
-        font-size: 1rem;
-        line-height: 1.65;
+    .metric-card { min-height:105px; }
+    .metric-name { color:#72868d; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .metric-value { color:var(--navy); font:700 1.52rem 'Space Grotesk',sans-serif; margin-top:.4rem; }
+
+    .status { border-radius:14px; padding:.82rem 1rem; border:1px solid; font-size:.9rem; font-weight:600; margin:.4rem 0 1rem; }
+    .ok { background:#eaf8f0; color:#17643c; border-color:#c8ead6; }
+    .bad { background:#fff1f1; color:#9f2020; border-color:#f1cccc; }
+    .warn { background:#fff8e9; color:#8a5b10; border-color:#f2dfa9; }
+    .info { background:#e9f7fb; color:#0a5870; border-color:#c7e7ef; }
+
+    .mini {
+        border:1px solid var(--line); background:rgba(255,255,255,.85); border-radius:16px; padding: .85rem 1rem;
+        box-shadow:var(--shadow); margin-bottom:.8rem;
     }
+    .mini-title { color:var(--blue); font:700 1rem 'Space Grotesk',sans-serif; margin-bottom:.45rem; }
 
-    .hero-stats {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        margin-top: 1.3rem;
-    }
+    .footer { margin-top:2rem; padding-top:1rem; border-top:1px solid var(--line); color:#7b9198; text-align:center; font-size:.75rem; }
 
-    .hero-chip {
-        padding: .48rem .72rem;
-        border-radius: 11px;
-        background: rgba(255,255,255,0.10);
-        border: 1px solid rgba(255,255,255,0.12);
-        color: #eefcff;
-        font-size: .82rem;
-        font-weight: 600;
-    }
-
-    .section-title {
-        font-family: 'Space Grotesk', sans-serif;
-        color: var(--water-deep);
-        font-size: 1.35rem;
-        font-weight: 700;
-        margin: .5rem 0 .8rem;
-        letter-spacing: -.02em;
-    }
-
-    .section-caption {
-        color: var(--muted);
-        margin: -0.45rem 0 1rem;
-        font-size: .92rem;
-    }
-
-    .card {
-        background: rgba(255,255,255,0.95);
-        border: 1px solid var(--line);
-        border-radius: 19px;
-        padding: 1rem 1.05rem;
-        box-shadow: var(--shadow);
-    }
-
-    .info-card {
-        min-height: 115px;
-    }
-
-    .card-label {
-        font-size: .74rem;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        color: #6e858d;
-        font-weight: 800;
-        margin-bottom: .45rem;
-    }
-
-    .card-value {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.26rem;
-        font-weight: 700;
-        color: var(--water-deep);
-        word-break: break-word;
-    }
-
-    .card-note {
-        margin-top: .3rem;
-        color: var(--muted);
-        font-size: .82rem;
-    }
-
-    .status {
-        display: flex;
-        gap: .55rem;
-        align-items: center;
-        padding: .8rem 1rem;
-        border-radius: 14px;
-        border: 1px solid;
-        font-weight: 600;
-        font-size: .9rem;
-    }
-
-    .status-ok {
-        color: #166534;
-        background: var(--soft-green);
-        border-color: #ccebdd;
-    }
-
-    .status-info {
-        color: #0c4a6e;
-        background: var(--soft-blue);
-        border-color: #ccecf3;
-    }
-
-    .status-warn {
-        color: #854d0e;
-        background: var(--soft-yellow);
-        border-color: #f5dfaa;
-    }
-
-    .status-danger {
-        color: #991b1b;
-        background: var(--soft-red);
-        border-color: #f2c9c6;
-    }
-
-    .metric-card {
-        background: rgba(255,255,255,0.96);
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        padding: .95rem 1rem;
-        box-shadow: var(--shadow);
-        min-height: 110px;
-    }
-
-    .metric-icon {
-        font-size: 1.1rem;
-        margin-bottom: .4rem;
-    }
-
-    .metric-name {
-        color: #71858c;
-        font-size: .76rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .06em;
-    }
-
-    .metric-number {
-        font-family: 'Space Grotesk', sans-serif;
-        color: var(--water-deep);
-        font-size: 1.65rem;
-        line-height: 1.15;
-        font-weight: 700;
-        margin-top: .3rem;
-    }
-
-    .table-wrap {
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        overflow: hidden;
-        box-shadow: var(--shadow);
-        background: white;
-    }
-
-    .mini-title {
-        font-family: 'Space Grotesk', sans-serif;
-        color: var(--water-dark);
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: .55rem;
-    }
-
-    .sidebar-brand {
-        padding: .25rem 0 .9rem;
-    }
-
-    .sidebar-brand .big {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.35rem;
-        font-weight: 700;
-        color: #ffffff;
-    }
-
-    .sidebar-brand .small {
-        color: #bfeef2;
-        font-size: .82rem;
-        line-height: 1.55;
-        margin-top: .3rem;
-    }
-
-    .sidebar-pill {
-        display: inline-block;
-        padding: .35rem .62rem;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.10);
-        border: 1px solid rgba(255,255,255,0.10);
-        color: #e6fbfd;
-        font-size: .73rem;
-        font-weight: 700;
-        margin: .22rem .18rem .05rem 0;
-    }
-
-    div[data-testid="stExpander"] {
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: rgba(255,255,255,0.72);
-        overflow: hidden;
-    }
-
-    .footer {
-        margin-top: 2rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--line);
-        color: #789098;
-        font-size: .78rem;
-        text-align: center;
-    }
-
-    /* Ajustes generales de widgets para integrarlos al diseño */
-    .stButton > button, .stDownloadButton > button {
-        border-radius: 12px;
-    }
-
-    [data-testid="stMetric"] {
-        background: white;
-        border: 1px solid var(--line);
-        padding: .85rem 1rem;
-        border-radius: 16px;
-        box-shadow: var(--shadow);
-    }
-
+    div[data-testid="stExpander"] { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.62); }
+    .stButton > button { border-radius:12px; font-weight:700; }
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 # ================================================================
 # 1. PARÁMETROS DE TU CONSULTA
 # ================================================================
 
-# Cada estudiante debe cambiar estos valores
-NOMBRE_ESTUDIANTE = "Juan Jose Patiño Amariles"
-
-CODIGO_ESTACION = "42"
-
-FECHA_DESDE = "2026-08-23"
-FECHA_HASTA = "2026-08-30"
-
-CALIDAD = 1
-# 1 = datos validados
-# 0 = todos los datos disponibles
-
+# Los valores originales son los valores por defecto, pero ahora sí
+# pueden cambiarse desde Streamlit antes de ejecutar la consulta.
+NOMBRE_ESTUDIANTE_DEFAULT = "Juan Jose Patiño Amariles"
+CODIGO_ESTACION_DEFAULT = "42"
+FECHA_DESDE_DEFAULT = "2026-08-23"
+FECHA_HASTA_DEFAULT = "2026-08-30"
+CALIDAD_DEFAULT = 1
 
 # ================================================================
 # CONFIGURACIÓN DE LA API
 # ================================================================
 
 API_BASE_URL = "https://marco.cornare.gov.co/api/v1/estaciones"
-
 LLAVE_FECHA = "level_date"
 LLAVE_VALOR = "level"
 
-
-# Coordenadas por defecto
+# Coordenadas por defecto (se conservan exactamente del archivo original)
 LAT_DEFECTO = 6.2766
 LON_DEFECTO = -75.5901
-
 CANDIDATOS_LAT = ["lat", "latitude", "latitud"]
 CANDIDATOS_LON = ["lng", "lon", "longitude", "longitud"]
 
-
 # ================================================================
-# COMPONENTES VISUALES (SOLO PRESENTACIÓN)
-# ================================================================
-
-def tarjeta_info(label, value, note=""):
-    nota_html = f'<div class="card-note">{note}</div>' if note else ""
-    st.markdown(
-        f"""
-        <div class="card info-card">
-            <div class="card-label">{label}</div>
-            <div class="card-value">{value}</div>
-            {nota_html}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def tarjeta_metrica(icono, nombre, valor):
-    st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-icon">{icono}</div>
-            <div class="metric-name">{nombre}</div>
-            <div class="metric-number">{valor}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def estado(mensaje, tipo="info"):
-    st.markdown(
-        f'<div class="status status-{tipo}">{mensaje}</div>',
-        unsafe_allow_html=True
-    )
-
-
-# ================================================================
-# CABECERA VISUAL
-# ================================================================
-
-st.markdown(
-    f"""
-    <div class="hero">
-        <div class="hero-kicker">🌊 CORNARE / MARCO · MONITOREO HIDROLÓGICO</div>
-        <div class="hero-title">Análisis de nivel de ríos y quebradas</div>
-        <div class="hero-subtitle">
-            Visualización y análisis de la serie de nivel de la estación
-            <strong>{CODIGO_ESTACION}</strong>, conservando el proceso original de
-            consulta, limpieza, calidad de datos y análisis estadístico.
-        </div>
-        <div class="hero-stats">
-            <div class="hero-chip">Estación {CODIGO_ESTACION}</div>
-            <div class="hero-chip">Periodo {FECHA_DESDE} → {FECHA_HASTA}</div>
-            <div class="hero-chip">Datos validados</div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# ================================================================
-# BARRA LATERAL INFORMATIVA
-# ================================================================
-
-with st.sidebar:
-    st.markdown(
-        """
-        <div class="sidebar-brand">
-            <div class="big">🌊 CORNARE</div>
-            <div class="small">
-                Panel de análisis hidrológico basado en la consulta
-                de datos de MARCO.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("---")
-    st.markdown("### Configuración actual")
-
-    st.markdown(
-        f"""
-        <span class="sidebar-pill">Estación {CODIGO_ESTACION}</span>
-        <span class="sidebar-pill">Calidad {CALIDAD}</span>
-        <span class="sidebar-pill">2026</span>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("**Estudiante**")
-    st.caption(NOMBRE_ESTUDIANTE)
-
-    st.markdown("**Periodo consultado**")
-    st.caption(f"{FECHA_DESDE} → {FECHA_HASTA}")
-
-    st.markdown("---")
-    st.markdown("### Proceso del análisis")
-    st.caption("01 · Consulta de API")
-    st.caption("02 · Serie temporal")
-    st.caption("03 · Missing values")
-    st.caption("04 · Outliers con IQR")
-    st.caption("05 · Normalización / Z-Score")
-    st.caption("06 · Train / Validation / Test")
-    st.caption("07 · Estadística descriptiva")
-
-    st.markdown("---")
-    st.caption("Los parámetros y operaciones del análisis original se mantienen sin cambios.")
-
-
-# ================================================================
-# 2. CONSULTAR LA API REAL Y TRAER TODAS LAS PÁGINAS
+# FUNCIONES ORIGINALES DE CONSULTA (MISMA LÓGICA)
 # ================================================================
 
 def obtener_serie_nivel(codigo_estacion, desde, hasta, calidad=1, timeout=30):
-
     url = f"{API_BASE_URL}/{codigo_estacion}/nivel"
 
     params = {
@@ -535,20 +201,16 @@ def obtener_serie_nivel(codigo_estacion, desde, hasta, calidad=1, timeout=30):
 
 
 def obtener_todas_las_paginas(datos_json, timeout=30):
-
     registros = list(datos_json.get("values", []))
-
     siguiente_url = datos_json.get("next")
 
     while siguiente_url:
-
         try:
             respuesta = requests.get(
                 siguiente_url,
                 timeout=timeout,
                 verify=False
             )
-
         except requests.exceptions.RequestException:
             break
 
@@ -556,726 +218,511 @@ def obtener_todas_las_paginas(datos_json, timeout=30):
             break
 
         pagina = respuesta.json()
-
-        registros.extend(
-            pagina.get("values", [])
-        )
-
+        registros.extend(pagina.get("values", []))
         siguiente_url = pagina.get("next")
 
     return registros
 
+# ================================================================
+# PRESENTACIÓN DE CONFIGURACIÓN
+# ================================================================
 
-# Ejecutar consulta
-datos_crudos, error = obtener_serie_nivel(
-    CODIGO_ESTACION,
-    FECHA_DESDE,
-    FECHA_HASTA,
-    CALIDAD
-)
+with st.sidebar:
+    st.markdown(
+        """
+        <div class="brand">
+            <div class="brand-icon">🌊</div>
+            <div>
+                <div class="brand-title">CORNARE / MARCO</div>
+                <div class="brand-sub">Monitoreo y análisis de niveles de ríos y quebradas</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("---")
+    st.markdown("### Parámetros de la consulta")
 
+    nombre_estudiante = st.text_input(
+        "Nombre del estudiante",
+        value=NOMBRE_ESTUDIANTE_DEFAULT,
+        key="nombre_estudiante",
+    )
+    codigo_estacion = st.text_input(
+        "Código de estación",
+        value=CODIGO_ESTACION_DEFAULT,
+        key="codigo_estacion",
+    )
+    fecha_desde = st.date_input(
+        "Fecha desde",
+        value=pd.to_datetime(FECHA_DESDE_DEFAULT).date(),
+        key="fecha_desde",
+    )
+    fecha_hasta = st.date_input(
+        "Fecha hasta",
+        value=pd.to_datetime(FECHA_HASTA_DEFAULT).date(),
+        key="fecha_hasta",
+    )
+    calidad = st.radio(
+        "Calidad de datos",
+        options=[1, 0],
+        index=0,
+        format_func=lambda x: "1 · Datos validados" if x == 1 else "0 · Todos los datos disponibles",
+        key="calidad",
+    )
+
+    ejecutar = st.button("🌊 Ejecutar análisis", use_container_width=True, type="primary")
+
+    st.markdown("---")
+    st.markdown("**Proceso original**")
+    st.caption("1. Consulta de API")
+    st.caption("2. Serie de tiempo")
+    st.caption("3. Tipos y orden temporal")
+    st.caption("4. Missing values reales")
+    st.caption("5. Outliers: IQR + límites físicos")
+    st.caption("6. Normalización y Z-Score")
+    st.caption("7. Train / Validation / Test")
+    st.caption("8. Estadística descriptiva")
+
+# Estado inicial: no se ejecuta una consulta distinta al archivo original
+# hasta que se presiona el botón con los parámetros deseados.
+if "datos_crudos" not in st.session_state:
+    st.session_state.datos_crudos = None
+    st.session_state.error = None
+    st.session_state.registros = None
+    st.session_state.config = None
+
+if ejecutar:
+    fecha_desde_str = fecha_desde.strftime("%Y-%m-%d")
+    fecha_hasta_str = fecha_hasta.strftime("%Y-%m-%d")
+    datos_crudos, error = obtener_serie_nivel(
+        codigo_estacion,
+        fecha_desde_str,
+        fecha_hasta_str,
+        calidad,
+    )
+    st.session_state.datos_crudos = datos_crudos
+    st.session_state.error = error
+    st.session_state.registros = None if error else obtener_todas_las_paginas(datos_crudos)
+    st.session_state.config = {
+        "nombre_estudiante": nombre_estudiante,
+        "codigo_estacion": codigo_estacion,
+        "fecha_desde": fecha_desde_str,
+        "fecha_hasta": fecha_hasta_str,
+        "calidad": calidad,
+    }
+
+# Cargar la última consulta ejecutada
+config = st.session_state.config
+if config is None:
+    config = {
+        "nombre_estudiante": nombre_estudiante,
+        "codigo_estacion": codigo_estacion,
+        "fecha_desde": fecha_desde.strftime("%Y-%m-%d"),
+        "fecha_hasta": fecha_hasta.strftime("%Y-%m-%d"),
+        "calidad": calidad,
+    }
+
+datos_crudos = st.session_state.datos_crudos
+error = st.session_state.error
+registros = st.session_state.registros
 
 # ================================================================
-# 3. CONSTRUIR EL DATAFRAME DE SERIE DE TIEMPO
+# CABECERA VISUAL
+# ================================================================
+
+st.markdown(
+    f"""
+    <div class="hero">
+        <div class="eyebrow">CORNARE / MARCO · ANÁLISIS HIDROLÓGICO</div>
+        <h1>Análisis de nivel de ríos y quebradas</h1>
+        <p>
+            Consulta, limpieza y análisis de la serie temporal de nivel manteniendo
+            el procedimiento original del ejercicio.
+        </p>
+        <div class="chips">
+            <span class="chip">Estación {config['codigo_estacion']}</span>
+            <span class="chip">{config['fecha_desde']} → {config['fecha_hasta']}</span>
+            <span class="chip">Calidad {config['calidad']}</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+if config is not None:
+    calidad_texto = "Datos validados" if config["calidad"] == 1 else "Todos los datos disponibles"
+    c1, c2, c3, c4 = st.columns(4)
+    for col, label, value, note in [
+        (c1, "Estudiante", config["nombre_estudiante"], "Parámetro editable"),
+        (c2, "Estación", config["codigo_estacion"], "Código consultado"),
+        (c3, "Periodo", f"{config['fecha_desde']} → {config['fecha_hasta']}", "Rango de consulta"),
+        (c4, "Calidad", calidad_texto, f"Valor API: {config['calidad']}"),
+    ]:
+        with col:
+            st.markdown(
+                f'<div class="info-card"><div class="label">{label}</div><div class="value">{value}</div><div class="note">{note}</div></div>',
+                unsafe_allow_html=True,
+            )
+
+# ================================================================
+# CONSULTA Y MENSAJE DE ESTADO
 # ================================================================
 
 if error:
-    estado(f"⚠️ <strong>Error al consultar la API:</strong> {error}", "danger")
+    st.markdown(f'<div class="status bad">❌ <strong>Error al consultar la API:</strong> {error}</div>', unsafe_allow_html=True)
+    st.stop()
 
-else:
-
-    registros = obtener_todas_las_paginas(datos_crudos)
-
-    estado(
-        f"✅ <strong>Consulta realizada correctamente.</strong> "
-        f"Se obtuvieron {len(registros):,} registros.",
-        "ok"
-    )
-
-
-# ================================================================
-# 3.1 RESUMEN DE CONSULTA
-# ================================================================
-
-if not error and registros:
-    st.markdown('<div class="section-title">Resumen de la consulta</div>', unsafe_allow_html=True)
+if registros is None:
     st.markdown(
-        '<div class="section-caption">Información principal de la fuente y del periodo analizado.</div>',
-        unsafe_allow_html=True
+        '<div class="status info">ℹ️ Configura los parámetros del panel izquierdo y pulsa <strong>Ejecutar análisis</strong> para consultar la API.</div>',
+        unsafe_allow_html=True,
     )
+    st.markdown(
+        '<div class="footer">CORNARE / MARCO · Panel visual de análisis · La lógica del ejercicio permanece en el código.</div>',
+        unsafe_allow_html=True,
+    )
+    st.stop()
 
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        tarjeta_info("Estación", CODIGO_ESTACION, "Código consultado en MARCO")
-    with c2:
-        tarjeta_info("Lecturas", f"{len(registros):,}", "Registros recibidos desde la API")
-    with c3:
-        tarjeta_info("Periodo", f"{FECHA_DESDE} → {FECHA_HASTA}", "Rango configurado")
-    with c4:
-        tarjeta_info("Calidad", str(CALIDAD), "1 = datos validados")
+st.markdown(
+    f'<div class="status ok">✅ <strong>Consulta realizada correctamente.</strong> Cantidad de registros obtenidos: {len(registros):,}</div>',
+    unsafe_allow_html=True,
+)
 
-    st.markdown("")
+if not registros:
+    st.warning("La consulta no devolvió registros para los parámetros seleccionados.")
+    st.markdown('<div class="footer">CORNARE / MARCO</div>', unsafe_allow_html=True)
+    st.stop()
 
 # ================================================================
 # 3. CONSTRUIR EL DATAFRAME DE SERIE DE TIEMPO
 # ================================================================
 
-if not error and registros:
+df = pd.DataFrame(registros)
+df = df.rename(columns={LLAVE_FECHA: "fecha", LLAVE_VALOR: "nivel"})
 
-    df = pd.DataFrame(registros)
+st.markdown('<div class="section-head"><div><div class="section-title">3. Serie de tiempo</div><div class="section-desc">Estructura recibida de la API y primeros registros.</div></div></div>', unsafe_allow_html=True)
 
-    # Cambiar nombres de columnas
-    df = df.rename(
-        columns={
-            LLAVE_FECHA: "fecha",
-            LLAVE_VALOR: "nivel"
-        }
-    )
+with st.expander("Ver columnas disponibles", expanded=False):
+    st.write(df.columns.tolist())
 
-    st.markdown('<div class="section-title">Serie de datos recibida</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Primeras observaciones obtenidas directamente de la consulta.</div>',
-        unsafe_allow_html=True
-    )
-
-    with st.expander("Ver columnas y primeros registros", expanded=False):
-        st.write("**Columnas disponibles:**")
-        st.code(", ".join(df.columns.tolist()), language="text")
-        st.dataframe(df.head(), use_container_width=True, hide_index=True)
-
+st.dataframe(df.head(), use_container_width=True, hide_index=True)
 
 # ================================================================
 # 4. TIPOS DE DATOS Y ORDEN TEMPORAL
 # ================================================================
 
-if not error and registros:
+df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
+df["nivel"] = pd.to_numeric(df["nivel"], errors="coerce")
+df = df.dropna(subset=["fecha", "nivel"])
+df = df.sort_values("fecha").reset_index(drop=True)
 
-    # Convertir fecha a datetime
-    df["fecha"] = pd.to_datetime(
-        df["fecha"],
-        errors="coerce"
-    )
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown(f'<div class="metric-card"><div class="metric-name">Desde</div><div class="metric-value">{df["fecha"].min()}</div></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown(f'<div class="metric-card"><div class="metric-name">Hasta</div><div class="metric-value">{df["fecha"].max()}</div></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown(f'<div class="metric-card"><div class="metric-name">Registros válidos</div><div class="metric-value">{len(df):,}</div></div>', unsafe_allow_html=True)
 
-    # Convertir nivel a número
-    df["nivel"] = pd.to_numeric(
-        df["nivel"],
-        errors="coerce"
-    )
+with st.expander("Ver tipos de datos y DataFrame ordenado", expanded=False):
+    st.write(df.dtypes)
+    st.dataframe(df.head(10), use_container_width=True, hide_index=True)
 
-    # Eliminar registros que no tengan fecha o nivel
-    df = df.dropna(
-        subset=["fecha", "nivel"]
-    )
+# ================================================================
+# UBICACIÓN DE LA ESTACIÓN (VISUAL; NO CAMBIA EL ANÁLISIS)
+# ================================================================
 
-    # Ordenar cronológicamente
-    df = df.sort_values(
-        "fecha"
-    ).reset_index(drop=True)
+lat_estacion = LAT_DEFECTO
+lon_estacion = LON_DEFECTO
+fuente_coord = "Coordenadas por defecto del archivo original"
 
-    st.markdown('<div class="section-title">Preparación de la serie temporal</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Conversión de tipos, limpieza básica y orden cronológico.</div>',
-        unsafe_allow_html=True
-    )
+# Cuando la respuesta trae lat/lon, se muestran automáticamente.
+registro_coord = registros[0] if isinstance(registros[0], dict) else {}
+for lat_key in CANDIDATOS_LAT:
+    if lat_key in registro_coord:
+        try:
+            lat_estacion = float(registro_coord[lat_key])
+            fuente_coord = f"Latitud detectada en la respuesta ({lat_key})"
+            break
+        except (TypeError, ValueError):
+            pass
+for lon_key in CANDIDATOS_LON:
+    if lon_key in registro_coord:
+        try:
+            lon_estacion = float(registro_coord[lon_key])
+            if fuente_coord == "Coordenadas por defecto del archivo original":
+                fuente_coord = f"Longitud detectada en la respuesta ({lon_key})"
+            break
+        except (TypeError, ValueError):
+            pass
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        tarjeta_info("Desde", str(df["fecha"].min()), "Fecha mínima después de limpiar")
-    with c2:
-        tarjeta_info("Hasta", str(df["fecha"].max()), "Fecha máxima después de limpiar")
-    with c3:
-        tarjeta_info("Registros válidos", f"{len(df):,}", "Observaciones con fecha y nivel")
+st.markdown('<div class="section-head"><div><div class="section-title">Ubicación de la estación</div><div class="section-desc">Referencia geográfica disponible para la estación consultada.</div></div></div>', unsafe_allow_html=True)
+loc1, loc2, loc3 = st.columns(3)
+with loc1:
+    st.markdown(f'<div class="info-card"><div class="label">Código</div><div class="value">{config["codigo_estacion"]}</div><div class="note">Estación consultada</div></div>', unsafe_allow_html=True)
+with loc2:
+    st.markdown(f'<div class="info-card"><div class="label">Latitud</div><div class="value">{lat_estacion:.6f}</div><div class="note">Coordenada geográfica</div></div>', unsafe_allow_html=True)
+with loc3:
+    st.markdown(f'<div class="info-card"><div class="label">Longitud</div><div class="value">{lon_estacion:.6f}</div><div class="note">Coordenada geográfica</div></div>', unsafe_allow_html=True)
 
-    with st.expander("Ver tipos y primeros 10 registros", expanded=False):
-        tipos = pd.DataFrame({
-            "Columna": df.dtypes.index,
-            "Tipo": [str(t) for t in df.dtypes.values]
-        })
-        st.dataframe(tipos, use_container_width=True, hide_index=True)
-        st.dataframe(df.head(10), use_container_width=True, hide_index=True)
-
+st.caption(f"Fuente de la ubicación mostrada: {fuente_coord}.")
+map_df = pd.DataFrame({"lat": [lat_estacion], "lon": [lon_estacion]})
+st.map(map_df, latitude="lat", longitude="lon", zoom=11)
 
 # ================================================================
 # 5. MISSING VALUES REALES
-#    MÉTODO CORRECTO: REINDEXAR A FRECUENCIA REGULAR
+# MÉTODO ORIGINAL: REINDEXAR A FRECUENCIA REGULAR
 # ================================================================
 
-if not error and registros and len(df) > 1:
+st.markdown('<div class="section-head"><div><div class="section-title">5. Missing values reales</div><div class="section-desc">Detección mediante frecuencia típica y reindexación regular.</div></div></div>', unsafe_allow_html=True)
 
-    # ------------------------------------------------------------
-    # Detectar la frecuencia típica de medición
-    # ------------------------------------------------------------
-
-    diferencias = (
-        df["fecha"]
-        .sort_values()
-        .diff()
-        .dropna()
-    )
-
+if len(df) > 1:
+    diferencias = df["fecha"].sort_values().diff().dropna()
     frecuencia_tipica = diferencias.mode()
 
     if len(frecuencia_tipica) > 0:
-
         frecuencia = frecuencia_tipica.iloc[0]
-
         frecuencia_texto = str(frecuencia)
-
     else:
-
         frecuencia = None
-
-        frecuencia_texto = "No determinada"
-
-    # ------------------------------------------------------------
-    # Reindexar a frecuencia regular
-    # ------------------------------------------------------------
+        frecuencia_texto = "No fue posible determinar la frecuencia."
 
     if frecuencia is not None:
-
-        # Convertimos la frecuencia a una frecuencia de pandas
-        frecuencia_str = pd.tseries.frequencies.to_offset(
-            frecuencia
-        )
-
+        frecuencia_str = pd.tseries.frequencies.to_offset(frecuencia)
         indice_completo = pd.date_range(
             start=df["fecha"].min(),
             end=df["fecha"].max(),
-            freq=frecuencia_str
+            freq=frecuencia_str,
         )
-
-        df_missing = (
-            df.set_index("fecha")
-            .reindex(indice_completo)
-        )
-
+        df_missing = df.set_index("fecha").reindex(indice_completo)
         df_missing.index.name = "fecha"
-
-        # --------------------------------------------------------
-        # Identificar missing values reales
-        # --------------------------------------------------------
-
         cantidad_missing = df_missing["nivel"].isna().sum()
-
         total_esperado = len(df_missing)
-
-        porcentaje_missing = (
-            cantidad_missing / total_esperado
-        ) * 100
-
-        st.markdown('<div class="section-title">Missing values reales</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="section-caption">Identificación mediante reindexación a la frecuencia típica de medición.</div>',
-            unsafe_allow_html=True
-        )
-
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            tarjeta_metrica("⏱️", "Frecuencia típica", frecuencia_texto)
-        with m2:
-            tarjeta_metrica("📅", "Registros esperados", f"{total_esperado:,}")
-        with m3:
-            tarjeta_metrica("📥", "Registros originales", f"{len(df):,}")
-        with m4:
-            tarjeta_metrica("🕳️", "Missing values", f"{cantidad_missing:,}")
-
-        if cantidad_missing == 0:
-            estado("✅ No se detectaron espacios faltantes en la estructura regular de la serie.", "ok")
-        else:
-            estado(
-                f"⚠️ Se detectaron {cantidad_missing:,} registros faltantes "
-                f"({porcentaje_missing:.2f}% del total esperado).",
-                "warn"
-            )
-
-        with st.expander("Ver primeros registros con estructura regular", expanded=False):
-            st.dataframe(
-                df_missing.head(20),
-                use_container_width=True
-            )
-
+        porcentaje_missing = (cantidad_missing / total_esperado) * 100
     else:
-
         df_missing = df.set_index("fecha").copy()
+        cantidad_missing = 0
+        total_esperado = len(df_missing)
+        porcentaje_missing = 0
 
-        st.markdown('<div class="section-title">Missing values reales</div>', unsafe_allow_html=True)
-        estado("ℹ️ No fue posible determinar la frecuencia típica; se conserva la estructura disponible.", "info")
+    a, b, c, d = st.columns(4)
+    for col, label, val in [
+        (a, "Frecuencia típica", frecuencia_texto),
+        (b, "Registros esperados", f"{total_esperado:,}"),
+        (c, "Missing reales", f"{cantidad_missing:,}"),
+        (d, "% missing", f"{porcentaje_missing:.2f}%"),
+    ]:
+        with col:
+            st.markdown(f'<div class="metric-card"><div class="metric-name">{label}</div><div class="metric-value">{val}</div></div>', unsafe_allow_html=True)
 
+    with st.expander("Ver primeros registros con estructura regular", expanded=False):
+        st.dataframe(df_missing.head(20), use_container_width=True)
 else:
-
-    if not error:
-        st.markdown('<div class="section-title">Missing values reales</div>', unsafe_allow_html=True)
-        estado("⚠️ No hay suficientes datos para analizar missing values.", "warn")
-
+    cantidad_missing = 0
+    total_esperado = len(df)
+    porcentaje_missing = 0
+    st.markdown('<div class="status warn">⚠️ No hay suficientes datos para analizar missing values.</div>', unsafe_allow_html=True)
 
 # ================================================================
 # 6. OUTLIERS CON IQR + LÍMITES FÍSICOS
 # ================================================================
 
-if not error and registros:
+st.markdown('<div class="section-head"><div><div class="section-title">6. Outliers con IQR + límites físicos</div><div class="section-desc">Se conserva el método IQR y el límite físico inferior igual a 0.</div></div></div>', unsafe_allow_html=True)
 
-    # Trabajamos únicamente con valores existentes
-    serie_nivel = df["nivel"].dropna()
+serie_nivel = df["nivel"].dropna()
+Q1 = serie_nivel.quantile(0.25)
+Q3 = serie_nivel.quantile(0.75)
+IQR = Q3 - Q1
+limite_inferior_iqr = Q1 - 1.5 * IQR
+limite_superior_iqr = Q3 + 1.5 * IQR
+limite_fisico_inferior = 0
+limite_fisico_superior = np.inf
 
-    # ------------------------------------------------------------
-    # Método IQR
-    # ------------------------------------------------------------
+df["outlier_iqr"] = (df["nivel"] < limite_inferior_iqr) | (df["nivel"] > limite_superior_iqr)
+df["outlier_fisico"] = (df["nivel"] < limite_fisico_inferior) | (df["nivel"] > limite_fisico_superior)
+df["outlier"] = df["outlier_iqr"] | df["outlier_fisico"]
+cantidad_outliers = df["outlier"].sum()
 
-    Q1 = serie_nivel.quantile(0.25)
+a, b, c, d, e = st.columns(5)
+for col, label, val in [
+    (a, "Q1", f"{Q1:.4f}"),
+    (b, "Q3", f"{Q3:.4f}"),
+    (c, "IQR", f"{IQR:.4f}"),
+    (d, "Límite superior", f"{limite_superior_iqr:.4f}"),
+    (e, "Outliers", f"{cantidad_outliers:,}"),
+]:
+    with col:
+        st.markdown(f'<div class="metric-card"><div class="metric-name">{label}</div><div class="metric-value">{val}</div></div>', unsafe_allow_html=True)
 
-    Q3 = serie_nivel.quantile(0.75)
-
-    IQR = Q3 - Q1
-
-    limite_inferior_iqr = Q1 - 1.5 * IQR
-
-    limite_superior_iqr = Q3 + 1.5 * IQR
-
-
-    # ------------------------------------------------------------
-    # Límites físicos
-    # ------------------------------------------------------------
-
-    # Un nivel negativo no tiene sentido físico
-    limite_fisico_inferior = 0
-
-    # Para el límite superior no imponemos un valor arbitrario,
-    # porque depende de las características de cada estación.
-    limite_fisico_superior = np.inf
-
-
-    # ------------------------------------------------------------
-    # Detectar outliers
-    # ------------------------------------------------------------
-
-    df["outlier_iqr"] = (
-        (df["nivel"] < limite_inferior_iqr) |
-        (df["nivel"] > limite_superior_iqr)
-    )
-
-    df["outlier_fisico"] = (
-        (df["nivel"] < limite_fisico_inferior) |
-        (df["nivel"] > limite_fisico_superior)
-    )
-
-    df["outlier"] = (
-        df["outlier_iqr"] |
-        df["outlier_fisico"]
-    )
-
-
-    cantidad_outliers = df["outlier"].sum()
-
-    st.markdown('<div class="section-title">Detección de outliers</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Método IQR combinado con el límite físico inferior de nivel igual a 0.</div>',
-        unsafe_allow_html=True
-    )
-
-    o1, o2, o3, o4, o5 = st.columns(5)
-    with o1:
-        tarjeta_metrica("Q1", "Primer cuartil", f"{Q1:.4f}")
-    with o2:
-        tarjeta_metrica("Q3", "Tercer cuartil", f"{Q3:.4f}")
-    with o3:
-        tarjeta_metrica("↔", "IQR", f"{IQR:.4f}")
-    with o4:
-        tarjeta_metrica("↘", "Límite inferior", f"{limite_inferior_iqr:.4f}")
-    with o5:
-        tarjeta_metrica("↗", "Límite superior", f"{limite_superior_iqr:.4f}")
-
-    if cantidad_outliers == 0:
-        estado("✅ No se detectaron outliers con el criterio aplicado.", "ok")
-    else:
-        estado(
-            f"⚠️ Se detectaron {cantidad_outliers:,} observaciones clasificadas como outliers.",
-            "warn"
-        )
-
-    with st.expander("Ver registros considerados outliers", expanded=False):
-        st.dataframe(
-            df[df["outlier"]],
-            use_container_width=True,
-            hide_index=True
-        )
-
+with st.expander("Ver límites completos y registros considerados outliers", expanded=False):
+    st.write(f"Límite inferior IQR: {limite_inferior_iqr:.4f}")
+    st.write(f"Límite superior IQR: {limite_superior_iqr:.4f}")
+    st.write("Límite físico inferior: 0")
+    st.dataframe(df[df["outlier"]], use_container_width=True, hide_index=True)
 
 # ================================================================
-# GRÁFICO DE OUTLIERS
+# GRÁFICO DE OUTLIERS — MISMA INFORMACIÓN DEL ORIGINAL
 # ================================================================
 
-if not error and registros:
-
-    fig_outliers, ax_outliers = plt.subplots(figsize=(12, 5))
-
-    ax_outliers.plot(
-        df["fecha"],
-        df["nivel"],
-        label="Nivel",
-        linewidth=2.1
-    )
-
-    ax_outliers.scatter(
-        df.loc[df["outlier"], "fecha"],
-        df.loc[df["outlier"], "nivel"],
-        label="Outliers",
-        s=42,
-        zorder=3
-    )
-
-    ax_outliers.axhline(
-        limite_superior_iqr,
-        linestyle="--",
-        linewidth=1.2,
-        label="Límite superior IQR"
-    )
-
-    ax_outliers.axhline(
-        limite_inferior_iqr,
-        linestyle="--",
-        linewidth=1.2,
-        label="Límite inferior IQR"
-    )
-
-    ax_outliers.set_title(
-        "Detección de outliers - Método IQR",
-        fontweight="bold"
-    )
-
-    ax_outliers.set_xlabel("Fecha")
-    ax_outliers.set_ylabel("Nivel")
-    ax_outliers.legend()
-    ax_outliers.grid(True, alpha=0.22)
-    fig_outliers.tight_layout()
-
-    st.pyplot(fig_outliers, use_container_width=True)
-    plt.close(fig_outliers)
-
+fig, ax = plt.subplots(figsize=(12, 5))
+ax.plot(df["fecha"], df["nivel"], label="Nivel")
+ax.scatter(df.loc[df["outlier"], "fecha"], df.loc[df["outlier"], "nivel"], label="Outliers")
+ax.axhline(limite_superior_iqr, linestyle="--", label="Límite superior IQR")
+ax.axhline(limite_inferior_iqr, linestyle="--", label="Límite inferior IQR")
+ax.set_title("Detección de outliers - Método IQR")
+ax.set_xlabel("Fecha")
+ax.set_ylabel("Nivel")
+ax.legend()
+ax.grid(True, alpha=.25)
+st.pyplot(fig, use_container_width=True)
+plt.close(fig)
 
 # ================================================================
 # 7. NORMALIZACIÓN Y ESTANDARIZACIÓN
 # ================================================================
 
-if not error and registros:
+st.markdown('<div class="section-head"><div><div class="section-title">7. Normalización y estandarización</div><div class="section-desc">Parámetros calculados sobre TRAIN para evitar fuga de información.</div></div></div>', unsafe_allow_html=True)
 
-    # ------------------------------------------------------------
-    # Para evitar fuga de información (data leakage),
-    # los parámetros se calculan sobre los datos de entrenamiento.
-    # ------------------------------------------------------------
+datos_modelo = df[["fecha", "nivel"]].copy()
+datos_modelo = datos_modelo[~df["outlier"]]
+datos_modelo = datos_modelo.dropna()
+datos_modelo = datos_modelo.sort_values("fecha").reset_index(drop=True)
 
-    datos_modelo = df[
-        ["fecha", "nivel"]
-    ].copy()
+n = len(datos_modelo)
+n_train = int(n * 0.70)
+n_validation = int(n * 0.15)
+train = datos_modelo.iloc[:n_train].copy()
+validation = datos_modelo.iloc[n_train:n_train + n_validation].copy()
+test = datos_modelo.iloc[n_train + n_validation:].copy()
 
-    # Quitamos outliers antes de preparar el modelo
-    datos_modelo = datos_modelo[
-        ~df["outlier"]
-    ]
+minimo = train["nivel"].min()
+maximo = train["nivel"].max()
+if maximo != minimo:
+    train["nivel_normalizado"] = (train["nivel"] - minimo) / (maximo - minimo)
+    validation["nivel_normalizado"] = (validation["nivel"] - minimo) / (maximo - minimo)
+    test["nivel_normalizado"] = (test["nivel"] - minimo) / (maximo - minimo)
+else:
+    train["nivel_normalizado"] = 0
+    validation["nivel_normalizado"] = 0
+    test["nivel_normalizado"] = 0
 
-    datos_modelo = datos_modelo.dropna()
+media_train = train["nivel"].mean()
+desviacion_train = train["nivel"].std()
+if desviacion_train != 0:
+    train["nivel_estandarizado"] = (train["nivel"] - media_train) / desviacion_train
+    validation["nivel_estandarizado"] = (validation["nivel"] - media_train) / desviacion_train
+    test["nivel_estandarizado"] = (test["nivel"] - media_train) / desviacion_train
+else:
+    train["nivel_estandarizado"] = 0
+    validation["nivel_estandarizado"] = 0
+    test["nivel_estandarizado"] = 0
 
-    datos_modelo = datos_modelo.sort_values(
-        "fecha"
-    ).reset_index(drop=True)
+m1, m2, m3, m4 = st.columns(4)
+for col, label, val in [
+    (m1, "Mínimo TRAIN", f"{minimo:.4f}"),
+    (m2, "Máximo TRAIN", f"{maximo:.4f}"),
+    (m3, "Media TRAIN", f"{media_train:.4f}"),
+    (m4, "Desv. estándar TRAIN", f"{desviacion_train:.4f}"),
+]:
+    with col:
+        st.markdown(f'<div class="metric-card"><div class="metric-name">{label}</div><div class="metric-value">{val}</div></div>', unsafe_allow_html=True)
 
-
-    # ------------------------------------------------------------
-    # Primero dividimos temporalmente
-    # ------------------------------------------------------------
-
-    n = len(datos_modelo)
-
-    n_train = int(n * 0.70)
-
-    n_validation = int(n * 0.15)
-
-    train = datos_modelo.iloc[
-        :n_train
-    ].copy()
-
-    validation = datos_modelo.iloc[
-        n_train:n_train + n_validation
-    ].copy()
-
-    test = datos_modelo.iloc[
-        n_train + n_validation:
-    ].copy()
-
-
-    # ------------------------------------------------------------
-    # NORMALIZACIÓN MIN-MAX
-    # ------------------------------------------------------------
-
-    minimo = train["nivel"].min()
-
-    maximo = train["nivel"].max()
-
-    if maximo != minimo:
-
-        train["nivel_normalizado"] = (
-            (train["nivel"] - minimo) /
-            (maximo - minimo)
-        )
-
-        validation["nivel_normalizado"] = (
-            (validation["nivel"] - minimo) /
-            (maximo - minimo)
-        )
-
-        test["nivel_normalizado"] = (
-            (test["nivel"] - minimo) /
-            (maximo - minimo)
-        )
-
-    else:
-
-        train["nivel_normalizado"] = 0
-
-        validation["nivel_normalizado"] = 0
-
-        test["nivel_normalizado"] = 0
-
-
-    # ------------------------------------------------------------
-    # ESTANDARIZACIÓN Z-SCORE
-    # ------------------------------------------------------------
-
-    media_train = train["nivel"].mean()
-
-    desviacion_train = train["nivel"].std()
-
-    if desviacion_train != 0:
-
-        train["nivel_estandarizado"] = (
-            (train["nivel"] - media_train) /
-            desviacion_train
-        )
-
-        validation["nivel_estandarizado"] = (
-            (validation["nivel"] - media_train) /
-            desviacion_train
-        )
-
-        test["nivel_estandarizado"] = (
-            (test["nivel"] - media_train) /
-            desviacion_train
-        )
-
-    else:
-
-        train["nivel_estandarizado"] = 0
-
-        validation["nivel_estandarizado"] = 0
-
-        test["nivel_estandarizado"] = 0
-
-
-    st.markdown('<div class="section-title">Normalización y estandarización</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Los parámetros se calculan sobre TRAIN para mantener el mismo criterio del análisis original.</div>',
-        unsafe_allow_html=True
-    )
-
-    n1, n2, n3, n4 = st.columns(4)
-    with n1:
-        tarjeta_metrica("MIN", "Mínimo TRAIN", f"{minimo:.4f}")
-    with n2:
-        tarjeta_metrica("MAX", "Máximo TRAIN", f"{maximo:.4f}")
-    with n3:
-        tarjeta_metrica("μ", "Media TRAIN", f"{media_train:.4f}")
-    with n4:
-        tarjeta_metrica("σ", "Desv. estándar TRAIN", f"{desviacion_train:.4f}")
-
-    with st.expander("Ver datos normalizados y estandarizados", expanded=False):
-        st.dataframe(
-            train.head(10),
-            use_container_width=True,
-            hide_index=True
-        )
-
+with st.expander("Ver datos normalizados y estandarizados", expanded=False):
+    st.dataframe(train.head(10), use_container_width=True, hide_index=True)
 
 # ================================================================
-# 8. TRAIN / VALIDATION / TEST
-#    SPLIT CRONOLÓGICO
+# 8. TRAIN / VALIDATION / TEST — SPLIT CRONOLÓGICO
 # ================================================================
 
-if not error and registros:
+st.markdown('<div class="section-head"><div><div class="section-title">8. Train / Validation / Test</div><div class="section-desc">División cronológica 70% / 15% / 15%, igual que el original.</div></div></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">División temporal</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Separación cronológica 70% / 15% / 15% del conjunto sin outliers.</div>',
-        unsafe_allow_html=True
-    )
+total_modelo = len(datos_modelo)
+porc_train = len(train) / total_modelo * 100 if total_modelo else 0
+porc_validation = len(validation) / total_modelo * 100 if total_modelo else 0
+porc_test = len(test) / total_modelo * 100 if total_modelo else 0
 
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        tarjeta_metrica("01", "TRAIN", f"{len(train):,} · {len(train) / len(datos_modelo) * 100:.1f}%")
-    with s2:
-        tarjeta_metrica("02", "VALIDATION", f"{len(validation):,} · {len(validation) / len(datos_modelo) * 100:.1f}%")
-    with s3:
-        tarjeta_metrica("03", "TEST", f"{len(test):,} · {len(test) / len(datos_modelo) * 100:.1f}%")
+p1, p2, p3 = st.columns(3)
+for col, label, count, pct in [
+    (p1, "TRAIN", len(train), porc_train),
+    (p2, "VALIDATION", len(validation), porc_validation),
+    (p3, "TEST", len(test), porc_test),
+]:
+    with col:
+        st.markdown(f'<div class="metric-card"><div class="metric-name">{label}</div><div class="metric-value">{count:,}</div><div class="note">{pct:.1f}%</div></div>', unsafe_allow_html=True)
 
-    rangos = []
+with st.expander("Ver rangos de fechas", expanded=False):
     if not train.empty:
-        rangos.append({"Conjunto": "TRAIN", "Desde": train["fecha"].min(), "Hasta": train["fecha"].max(), "Registros": len(train)})
+        st.write("TRAIN:", train["fecha"].min(), "→", train["fecha"].max())
     if not validation.empty:
-        rangos.append({"Conjunto": "VALIDATION", "Desde": validation["fecha"].min(), "Hasta": validation["fecha"].max(), "Registros": len(validation)})
+        st.write("VALIDATION:", validation["fecha"].min(), "→", validation["fecha"].max())
     if not test.empty:
-        rangos.append({"Conjunto": "TEST", "Desde": test["fecha"].min(), "Hasta": test["fecha"].max(), "Registros": len(test)})
+        st.write("TEST:", test["fecha"].min(), "→", test["fecha"].max())
 
-    if rangos:
-        with st.expander("Ver rangos de fechas de cada conjunto", expanded=False):
-            st.dataframe(pd.DataFrame(rangos), use_container_width=True, hide_index=True)
-
-
-# ---------------------------------------------------------------
-# Gráfico del split
-# ---------------------------------------------------------------
-
-if not error and registros:
-
-    fig_split, ax_split = plt.subplots(figsize=(12, 5))
-
-    if not train.empty:
-        ax_split.plot(
-            train["fecha"],
-            train["nivel"],
-            label="Train",
-            linewidth=2
-        )
-
-    if not validation.empty:
-        ax_split.plot(
-            validation["fecha"],
-            validation["nivel"],
-            label="Validation",
-            linewidth=2
-        )
-
-    if not test.empty:
-        ax_split.plot(
-            test["fecha"],
-            test["nivel"],
-            label="Test",
-            linewidth=2
-        )
-
-    ax_split.set_title(
-        "División cronológica Train / Validation / Test",
-        fontweight="bold"
-    )
-
-    ax_split.set_xlabel("Fecha")
-    ax_split.set_ylabel("Nivel")
-    ax_split.legend()
-    ax_split.grid(True, alpha=0.22)
-    fig_split.tight_layout()
-
-    st.pyplot(fig_split, use_container_width=True)
-    plt.close(fig_split)
-
+fig, ax = plt.subplots(figsize=(12, 5))
+if not train.empty:
+    ax.plot(train["fecha"], train["nivel"], label="Train")
+if not validation.empty:
+    ax.plot(validation["fecha"], validation["nivel"], label="Validation")
+if not test.empty:
+    ax.plot(test["fecha"], test["nivel"], label="Test")
+ax.set_title("División cronológica Train / Validation / Test")
+ax.set_xlabel("Fecha")
+ax.set_ylabel("Nivel")
+ax.legend()
+ax.grid(True, alpha=.25)
+st.pyplot(fig, use_container_width=True)
+plt.close(fig)
 
 # ================================================================
 # 9. ESTADÍSTICA DESCRIPTIVA
 # ================================================================
 
-if not error and registros:
+st.markdown('<div class="section-head"><div><div class="section-title">9. Estadística descriptiva</div><div class="section-desc">Resumen estadístico de la variable nivel.</div></div></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Estadística descriptiva</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Medidas principales calculadas sobre la serie limpia.</div>',
-        unsafe_allow_html=True
-    )
+estadistica = df["nivel"].describe()
+st.dataframe(estadistica.to_frame(name="nivel"), use_container_width=True)
 
-    estadistica = df["nivel"].describe()
-
-    e1, e2, e3 = st.columns(3)
-    with e1:
-        tarjeta_metrica("x̄", "Media", f"{df['nivel'].mean():.4f}")
-    with e2:
-        tarjeta_metrica("Md", "Mediana", f"{df['nivel'].median():.4f}")
-    with e3:
-        tarjeta_metrica("σ", "Desviación estándar", f"{df['nivel'].std():.4f}")
-
-    e4, e5, e6 = st.columns(3)
-    with e4:
-        tarjeta_metrica("↓", "Mínimo", f"{df['nivel'].min():.4f}")
-    with e5:
-        tarjeta_metrica("↑", "Máximo", f"{df['nivel'].max():.4f}")
-    with e6:
-        tarjeta_metrica("↔", "Rango", f"{df['nivel'].max() - df['nivel'].min():.4f}")
-
-    with st.expander("Ver estadística descriptiva completa", expanded=False):
-        estadistica_df = estadistica.to_frame(name="valor")
-        st.dataframe(estadistica_df, use_container_width=True)
-
+s1, s2, s3, s4, s5, s6 = st.columns(6)
+for col, label, val in [
+    (s1, "Media", df["nivel"].mean()),
+    (s2, "Mediana", df["nivel"].median()),
+    (s3, "Desv. estándar", df["nivel"].std()),
+    (s4, "Mínimo", df["nivel"].min()),
+    (s5, "Máximo", df["nivel"].max()),
+    (s6, "Rango", df["nivel"].max() - df["nivel"].min()),
+]:
+    with col:
+        st.markdown(f'<div class="metric-card"><div class="metric-name">{label}</div><div class="metric-value">{val:.4f}</div></div>', unsafe_allow_html=True)
 
 # ================================================================
-# RESUMEN FINAL
+# RESUMEN FINAL — MISMAS VARIABLES DEL ORIGINAL
 # ================================================================
 
-if not error and registros:
+st.markdown('<div class="section-head"><div><div class="section-title">Resumen del análisis</div><div class="section-desc">Consolidado final de la consulta y sus resultados.</div></div></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Resumen final del análisis</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-caption">Concentrado de los resultados principales obtenidos en todo el proceso.</div>',
-        unsafe_allow_html=True
-    )
+r1, r2, r3, r4 = st.columns(4)
+summary_items = [
+    (r1, "Estudiante", config["nombre_estudiante"]),
+    (r2, "Estación", config["codigo_estacion"]),
+    (r3, "Lecturas originales", f"{len(df):,}"),
+    (r4, "Outliers detectados", f"{cantidad_outliers:,}"),
+]
+for col, label, val in summary_items:
+    with col:
+        st.markdown(f'<div class="info-card"><div class="label">{label}</div><div class="value">{val}</div></div>', unsafe_allow_html=True)
 
-    summary_cols = st.columns(2)
-
-    resumen_izq = pd.DataFrame({
-        "Indicador": [
-            "Estudiante",
-            "Estación",
-            "Periodo",
-            "Lecturas originales",
-        ],
-        "Resultado": [
-            NOMBRE_ESTUDIANTE,
-            CODIGO_ESTACION,
-            f"{FECHA_DESDE} hasta {FECHA_HASTA}",
-            len(df),
-        ]
-    })
-
-    resumen_der = pd.DataFrame({
-        "Indicador": [
-            "Missing values reales",
-            "Outliers detectados",
-            "Promedio del nivel",
-            "Desviación estándar",
-        ],
-        "Resultado": [
-            cantidad_missing if "cantidad_missing" in locals() else "No calculado",
-            cantidad_outliers,
-            f"{df['nivel'].mean():.4f}",
-            f"{df['nivel'].std():.4f}",
-        ]
-    })
-
-    with summary_cols[0]:
-        st.dataframe(resumen_izq, use_container_width=True, hide_index=True)
-
-    with summary_cols[1]:
-        st.dataframe(resumen_der, use_container_width=True, hide_index=True)
-
-    st.markdown(
-        """
-        <div class="status status-info">
-            💧 El flujo conserva la consulta a MARCO, la limpieza de la serie,
-            la identificación de missing values, el análisis de outliers,
-            la normalización, la división temporal y las estadísticas del código original.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+r5, r6, r7, r8 = st.columns(4)
+for col, label, val in [
+    (r5, "Periodo", f"{config['fecha_desde']} → {config['fecha_hasta']}"),
+    (r6, "Missing reales", f"{cantidad_missing:,}"),
+    (r7, "Promedio del nivel", f"{df['nivel'].mean():.4f}"),
+    (r8, "Desv. estándar", f"{df['nivel'].std():.4f}"),
+]:
+    with col:
+        st.markdown(f'<div class="info-card"><div class="label">{label}</div><div class="value">{val}</div></div>', unsafe_allow_html=True)
 
 st.markdown(
-    """
-    <div class="footer">
-        CORNARE / MARCO · Panel académico de análisis de nivel de ríos y quebradas
-    </div>
-    """,
-    unsafe_allow_html=True
+    '<div class="footer">CORNARE / MARCO · Análisis de nivel de ríos y quebradas · Interfaz rediseñada sin sustituir el procedimiento analítico original.</div>',
+    unsafe_allow_html=True,
 )
